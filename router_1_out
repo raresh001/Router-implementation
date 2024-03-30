@@ -1,0 +1,167 @@
+Setting up interface: rr-0-1
+Setting up interface: r-0
+Setting up interface: r-1
+192.168.0.2
+Best: 192.0.1.1
+3221225729
+3232235520
+This router's ip is 192.0.1.2
+AICICICICICI
+Find in IPv4 parser: 
+192.168.0.2
+Best: 192.0.1.1
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: ca fe ba be 0 1 
+PRINT next hop IP address: 192.0.1.1
+Find in IPv4 parser: 
+192.168.2.2
+Best: 192.168.2.2
+Find in IPv4 parser: 
+192.168.1.2
+Best: 192.0.1.1
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: ca fe ba be 0 1 
+PRINT next hop IP address: 192.0.1.1
+Find in IPv4 parser: 
+192.168.2.2
+Best: 192.168.2.2
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: de ad be ef 0 2 
+PRINT next hop IP address: 192.168.2.2
+Find in IPv4 parser: 
+192.168.3.2
+Best: 192.168.3.2
+Find in IPv4 parser: 
+192.168.1.2
+Best: 192.0.1.1
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: ca fe ba be 0 1 
+PRINT next hop IP address: 192.0.1.1
+Find in IPv4 parser: 
+192.168.3.2
+Best: 192.168.3.2
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: de ad be ef 0 3 
+PRINT next hop IP address: 192.168.3.2
+Find in IPv4 parser: 
+192.168.3.2
+Best: 192.168.3.2
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: de ad be ef 0 3 
+PRINT next hop IP address: 192.168.3.2
+Find in IPv4 parser: 
+192.168.0.2
+Best: 192.0.1.1
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: ca fe ba be 0 1 
+PRINT next hop IP address: 192.0.1.1
+Find in IPv4 parser: 
+192.168.3.2
+Best: 192.168.3.2
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: de ad be ef 0 3 
+PRINT next hop IP address: 192.168.3.2
+Find in IPv4 parser: 
+192.168.0.2
+Best: 192.0.1.1
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: ca fe ba be 0 1 
+PRINT next hop IP address: 192.0.1.1
+Find in IPv4 parser: 
+192.168.3.2
+Best: 192.168.3.2
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: de ad be ef 0 3 
+PRINT next hop IP address: 192.168.3.2
+Find in IPv4 parser: 
+192.168.0.2
+Best: 192.0.1.1
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: ca fe ba be 0 1 
+PRINT next hop IP address: 192.0.1.1
+Find in IPv4 parser: 
+192.168.3.2
+Best: 192.168.3.2
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: de ad be ef 0 3 
+PRINT next hop IP address: 192.168.3.2
+Find in IPv4 parser: 
+192.168.0.2
+Best: 192.0.1.1
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: ca fe ba be 0 1 
+PRINT next hop IP address: 192.0.1.1
+Find in IPv4 parser: 
+192.168.3.2
+Best: 192.168.3.2
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: de ad be ef 0 3 
+PRINT next hop IP address: 192.168.3.2
+Find in IPv4 parser: 
+192.168.0.2
+Best: 192.0.1.1
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: ca fe ba be 0 1 
+PRINT next hop IP address: 192.0.1.1
+Find in IPv4 parser: 
+192.168.3.2
+Best: 192.168.3.2
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: de ad be ef 0 3 
+PRINT next hop IP address: 192.168.3.2
+Find in IPv4 parser: 
+192.168.0.2
+Best: 192.0.1.1
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: ca fe ba be 0 1 
+PRINT next hop IP address: 192.0.1.1
+Find in IPv4 parser: 
+192.168.3.2
+Best: 192.168.3.2
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: de ad be ef 0 3 
+PRINT next hop IP address: 192.168.3.2
+Find in IPv4 parser: 
+192.168.0.2
+Best: 192.0.1.1
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: ca fe ba be 0 1 
+PRINT next hop IP address: 192.0.1.1
+Find in IPv4 parser: 
+192.168.3.2
+Best: 192.168.3.2
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: de ad be ef 0 3 
+PRINT next hop IP address: 192.168.3.2
+Find in IPv4 parser: 
+192.168.0.2
+Best: 192.0.1.1
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: ca fe ba be 0 1 
+PRINT next hop IP address: 192.0.1.1
+Find in IPv4 parser: 
+192.168.3.2
+Best: 192.168.3.2
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: de ad be ef 0 3 
+PRINT next hop IP address: 192.168.3.2
+Find in IPv4 parser: 
+192.168.0.2
+Best: 192.0.1.1
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: ca fe ba be 0 1 
+PRINT next hop IP address: 192.0.1.1
+Find in IPv4 parser: 
+192.168.3.2
+Best: 192.168.3.2
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: de ad be ef 0 3 
+PRINT next hop IP address: 192.168.3.2
+Find in IPv4 parser: 
+192.168.0.2
+Best: 192.0.1.1
+SEND Ipv4 Package:
+PRINT MAC ADDRESS: ca fe ba be 0 1 
+PRINT next hop IP address: 192.0.1.1
+This router's ip is 192.168.3.1
+AICICICICICI
