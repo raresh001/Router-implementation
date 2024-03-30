@@ -16,6 +16,11 @@ enum ethertype_constants {
     ETHERTYPE_ARP = 0x0806
 };
 
+enum icmp_constants {
+    DESTINATION_UNREACHABLE,
+    TIME_EXCEEDED
+};
+
 class radix_tree {
 public:
     radix_tree() { root = nullptr; }
@@ -27,6 +32,8 @@ private:
     struct node;
     node *root;
 
+    // get a mask reprezenting the common part of the 2 IP addresses
+    // which is blocked to mask's size
     uint32_t compute_common(uint32_t ip1, uint32_t ip2, uint32_t mask);
     void delete_rec(node *tree);
     node *add_route_rec(node *tree, route_table_entry *entry);
@@ -56,12 +63,6 @@ struct radix_tree::node {
 
 struct mac_address {
     uint8_t addr[6];
-
-    mac_address() {}
-
-    mac_address(const mac_address& m) {
-        memcpy(addr, m.addr, sizeof(addr));
-    }
 };
 
 struct waiting_package {
@@ -73,12 +74,9 @@ struct waiting_package {
     waiting_package(int _interface, uint32_t _ip, char *_data, size_t _len) {
         interface = _interface;
         ip = _ip;
-        data = new char[_len];
-        memcpy(data, _data, _len);
+        data = _data;
         len = _len;
     }
-
-    ~waiting_package() { delete data; }
 };
 
 struct arp_request {
@@ -90,19 +88,15 @@ struct arp_request {
     arp_request(int _interface, uint32_t _ip_requested, char *_data, size_t _len) {
         interface = _interface;
         ip_requested = _ip_requested;
-        data = new char[_len];
-        memcpy(data, _data, _len);
+        data = _data;
         len = _len;
     }
-
-    ~arp_request() { delete data; }
 };
 
 class Router {
 public:
     Router(const char *routing_info_file);
     void run();
-    void test_radix();
 
 private:
     radix_tree routing_data;
@@ -120,14 +114,22 @@ private:
         return nullptr;
     }
 
+    // send the package that starts with eth_hdr to address 
+    // specified by m using the given interface
     void send_over_Ethernet(ether_header *eth_hdr, size_t len, int interface, const mac_address &m);
-    void manage_IPv4_package(char *buf, size_t len);
 
+    void manage_IPv4_package(int interface, char *buf, size_t len);
+
+    // add m to the MAC information cache of the router 
+    // and update the pending requests to its IP address
     void update_MAC_info(uint32_t ip, const mac_address& m);
 
     void generate_ARP_request(int interface, uint32_t ip);
     void generate_ARP_reply(arp_request& request, const mac_address& m);
     void manage_ARP_package(int interface, char *buf, size_t len);
+
+    void manage_ICMP_package(int interface, char *buf, size_t len);
+    void send_ICMP_reply(int interface, char *buf, size_t len, icmp_constants response_type);
 };
 
 void radix_tree::delete_rec(radix_tree::node *tree) {
@@ -206,11 +208,6 @@ route_table_entry *radix_tree::find_best(uint32_t ip) {
     node *iter = root;
     route_table_entry *best = nullptr;
 
-    char i[INET_ADDRSTRLEN];
-    uint32_t ip_ = htonl(ip);
-    inet_ntop(AF_INET, &ip_, i, INET_ADDRSTRLEN);
-    cout << i << endl;
-
     while (iter) {
         if (iter->label != (ip & iter->label_mask)) {
             // none of the nodes from this subtree can fit ip
@@ -229,20 +226,11 @@ route_table_entry *radix_tree::find_best(uint32_t ip) {
         }
     }
 
-    if (best) {
-        char ip1[INET_ADDRSTRLEN];
-        uint32_t ip1_n = htonl(best->next_hop);
-
-        inet_ntop(AF_INET, &ip1_n, ip1, INET_ADDRSTRLEN);
-        cout << "Best: " << ip1 << endl;
-    }
-
     return best;
 }
 
 Router::Router(const char *routing_info_filename) {
     ifstream is(routing_info_filename);
-    ifstream is_macs("arp_table.txt");
 
 	char *p, line[64];
 
@@ -278,59 +266,6 @@ Router::Router(const char *routing_info_filename) {
 
         routing_data.add_entry(entry);
 	}
-
-    // while (!is_macs.eof()) {
-    //     is_macs.getline(line, 64);
-
-    //     cout << line << endl;
-
-    //     if (*line == '\n' || *line == '\0') {
-    //         break;
-    //     }
-
-    //     uint32_t ip;
-    //     mac_address m;
-
-    //     p = strtok(line, " ");
-    //     inet_pton(AF_INET, line, (char *)&ip);
-
-    //     p = strtok(NULL, " ");
-    //     hwaddr_aton(p, m.addr);
-
-    //     // mac_info.insert({ntohl(ip), m});
-    // }
-
-    // for (auto iter : mac_info) {
-    //     char addr[INET_ADDRSTRLEN];
-    //     uint32_t ip = htonl(iter.first);
-    //     inet_ntop(AF_INET, (char *)&ip, addr, INET_ADDRSTRLEN);
-            
-    //     cout << addr << " ";
-
-    //     for (int i = 0; i < 6; i++) {
-    //         cout << hex << (int)iter.second.addr[i] << " ";
-    //     }
-
-    //     cout << endl;
-    // }
-}
-
-void Router::test_radix() {
-    string a;
-
-    a = string("192.168.0.2");
-    uint32_t ip;
-
-    inet_pton(AF_INET, a.data(), &ip);
-    route_table_entry *best = routing_data.find_best(ntohl(ip));
-
-    if (best == nullptr) {
-        cout << "EEEEEEEEEEEEEEEEEEEEEEEEEE" << endl;
-        return;
-    }
-
-    cout << best->next_hop << endl;
-    cout << best->prefix << endl;
 }
 
 void Router::run() {
@@ -347,7 +282,7 @@ void Router::run() {
 
         switch (ntohs(eth_hdr->ether_type)) {
             case ETHERTYPE_IP:
-                manage_IPv4_package(buf, len);
+                manage_IPv4_package(interface, buf, len);
                 break;
             case ETHERTYPE_ARP:
                 manage_ARP_package(interface, buf, len);
@@ -362,83 +297,86 @@ void Router::send_over_Ethernet(ether_header *eth_hdr,
                                 const mac_address &m) {
 
     memcpy(eth_hdr->ether_dhost, m.addr, sizeof(m.addr));
-
-    // for (int i = 0; i < 6; i++) {
-    //     cout << hex << (int)eth_hdr->ether_dhost[i] << " ";
-    // }
-
-    // cout << endl;
-
     get_interface_mac(interface, eth_hdr->ether_shost);
     send_to_link(interface, (char *)eth_hdr, len);
-
-    // cout << "End in send_over_ether\n";
 }
 
-void Router::manage_IPv4_package(char *buf, size_t len) {
+void Router::manage_IPv4_package(int interface, char *buf, size_t len) {
     ether_header *eth_hdr = (ether_header *) buf;
     iphdr *ip_hdr = (iphdr *)(eth_hdr + 1);
-
-    // Check if we got an IPv4 packet
-    if (ntohs(eth_hdr->ether_type) != ETHERTYPE_IP) {
-        cout << "Ignored non-IPv4 packet" << endl;
-        return;
-    }
 
     // Check the IPv4 header integrity
     uint16_t check_sum = ntohs(ip_hdr->check);
     ip_hdr->check = 0;
 
     if (check_sum != checksum((uint16_t *)ip_hdr, sizeof(iphdr))) {
-        cout << "Ignored package with invalid checksum" << endl;
+        // Ignore package with invalid checksum
         return;
     }
 
     // Check TTL
     if (ip_hdr->ttl <= 1) {
-        cout << "Ignored package with TTL <= 1" << endl;
+        send_ICMP_reply(interface, buf, len, TIME_EXCEEDED);
         return;
     }
 
     ip_hdr->ttl--;
     ip_hdr->check = htons(checksum((uint16_t *)ip_hdr, sizeof(iphdr)));
 
+    // check if this package has the router as destination
+    char *ip_str = get_interface_ip(interface);
+    uint32_t ip;
+    inet_pton(AF_INET, ip_str, &ip);
+    if (ip == ip_hdr->daddr) {
+        if (ip_hdr->protocol == IPPROTO_ICMP) {
+            manage_ICMP_package(interface, buf, len);
+        } else {
+            cout << "Ignore non-ICMP packages" << endl;
+            return;
+        }
+    }
+
     // Get next hop
-    cout << "Find in IPv4 parser: \n";
     route_table_entry *best_route = routing_data.find_best(ntohl(ip_hdr->daddr));
     if (best_route == nullptr) {
-        cout << "Ignored package with no routing solution" << endl;
+        send_ICMP_reply(interface, buf, len, DESTINATION_UNREACHABLE);
         return;
     }
 
-    // cout << "FIND IN MAC\n";
     mac_address *dest_mac = get_mac_address(best_route->next_hop);
     if (dest_mac == nullptr) {
-        // cout << "DID NOT FIND ANYTHING\n";
+        char *data = new char[len];
+        memcpy(data, buf, len);
         waiting_packages.push_back(waiting_package(best_route->interface, 
                                                     best_route->next_hop, 
-                                                    buf, 
+                                                    data,
                                                     len));
         generate_ARP_request(best_route->interface, best_route->next_hop);
         return;
     }
 
-    cout << "SEND Ipv4 Package:\n";
-    cout << "PRINT MAC ADDRESS: ";
-
-    for (int i = 0; i < 6; i++) {
-        cout << hex << (int) dest_mac->addr[i] << " ";
-    }
-
-    cout << endl;
-
-    char line[INET_ADDRSTRLEN];
-    uint32_t ip = htonl(best_route->next_hop);
-    inet_ntop(AF_INET, (char *)&ip, line, INET_ADDRSTRLEN);
-
-    cout << "PRINT next hop IP address: " << line << endl;
-
     send_over_Ethernet(eth_hdr, len, best_route->interface, *dest_mac);
+}
+
+void Router::manage_ICMP_package(int interface, char *buf, size_t len) {
+    iphdr *ip_hdr = (iphdr *)(buf + sizeof(ether_header));
+    icmphdr *icmp_hdr = (icmphdr *)(ip_hdr + 1);
+
+    // send echo reply
+    icmp_hdr->type = 0;
+    icmp_hdr->code = 0;
+
+    // remake ICMP header checksum
+    icmp_hdr->checksum = 0;
+    icmp_hdr->checksum = htons(checksum((uint16_t *)icmp_hdr, sizeof(icmphdr)));
+
+    // swap IP fields in IPv4 header
+    uint32_t aux = ip_hdr->daddr;
+    ip_hdr->daddr = ip_hdr->saddr;
+    ip_hdr->saddr = aux;
+
+    ip_hdr->check = 0;
+    ip_hdr->check = htons(checksum((uint16_t *)ip_hdr, sizeof(iphdr)));
 }
 
 void Router::update_MAC_info(uint32_t ip, const mac_address& m) {
@@ -454,18 +392,20 @@ void Router::update_MAC_info(uint32_t ip, const mac_address& m) {
                                 iter_waiting->len,
                                 iter_waiting->interface,
                                 m);
+            delete iter_waiting->data;
             iter_waiting = waiting_packages.erase(iter_waiting);
         } else {
             iter_waiting++;
         }
     }
 
-    // see ig any arp request can now be replied with this information
+    // see if any arp request can now be replied with this information
     auto iter_arp = arp_requests.begin();
 
     while (iter_arp != arp_requests.end()) {
         if (iter_arp->ip_requested == ip) {
             generate_ARP_reply(*iter_arp, m);
+            delete iter_arp->data;
             iter_arp = arp_requests.erase(iter_arp);
         } else {
             iter_arp++;
@@ -538,22 +478,17 @@ void Router::manage_ARP_package(int interface, char *buf, size_t len) {
         update_MAC_info(ntohl(arp_hdr->spa), m);
     }
 
-    // if this is a request, drop it
+    // if this is not a request, drop it
     if (ntohs(arp_hdr->op) != 1) {
         return;
     }
 
     // test if this is exactly router's ip
     char *ip_str = get_interface_ip(interface);
-
-    cout << "This router's ip is " << ip_str << endl;
     uint32_t ip;
-
     inet_pton(AF_INET, ip_str, &ip);
 
     if (ip == arp_hdr->tpa) {
-        cout << "AICICICICICI\n";
-
         // reply to this request by sending this interface's MAC address
         arp_request arp(interface, ntohl(arp_hdr->tpa), buf, len);
         mac_address m;
@@ -562,8 +497,6 @@ void Router::manage_ARP_package(int interface, char *buf, size_t len) {
         return;
     }
 
-    cout << "AAAAAAAAAAAAAAAAAAAAAAAAAA\n";
-
     // see if the router knows the MAC address of the requested host
     auto mac_iter = mac_info.find(ntohl(arp_hdr->tpa));
 
@@ -571,18 +504,80 @@ void Router::manage_ARP_package(int interface, char *buf, size_t len) {
         arp_request arp(interface, ntohl(arp_hdr->tpa), buf, len);
         generate_ARP_reply(arp, mac_iter->second);
     } else {
+        char *data = new char[len];
+        memcpy(data, buf, len);
         arp_requests.push_back(arp_request(interface, ntohl(arp_hdr->tpa), buf, len));
     }
 }
 
+void Router::send_ICMP_reply(int interface, char *buf, size_t len, icmp_constants response_type) {
+    char response[sizeof(ether_header) + 2 * sizeof(iphdr) + sizeof(icmphdr) + 8];
+    size_t response_len;
+
+    ether_header *eth_hdr = (ether_header *)response;
+    iphdr *ip_hdr = (iphdr *)(eth_hdr + 1);
+    icmphdr *icmp_hdr = (icmphdr *)(ip_hdr + 1);
+    iphdr *ip_hdr_over_icmp = (iphdr *)(icmp_hdr + 1);
+
+    switch (response_type) {
+        case DESTINATION_UNREACHABLE:
+            icmp_hdr->type = 3;
+            icmp_hdr->code = 0;
+            break;
+        case TIME_EXCEEDED:
+            icmp_hdr->type = 11;
+            icmp_hdr->code = 0;
+            break;
+        default:
+            return;
+    }
+
+    icmp_hdr->checksum = 0;
+    icmp_hdr->checksum = htons(checksum((uint16_t *)icmp_hdr, sizeof(icmphdr)));
+
+    // copy the IP header from buf and the first 8 bytes from payload
+    // (or the size of payload if it is smaller than that)
+    if (len - sizeof(ether_header) - sizeof(iphdr) > 8) {
+        response_len = sizeof(response);
+        memcpy(ip_hdr_over_icmp,
+                buf + sizeof(ether_header),
+                8 + sizeof(iphdr));
+    } else {
+        response_len = len + sizeof(iphdr) + sizeof(icmphdr);
+        memcpy(ip_hdr_over_icmp,
+                buf + sizeof(ether_header),
+                len - sizeof(ether_header));
+    }
+
+    // remake IPv4 header
+    memcpy(ip_hdr, buf + sizeof(ether_header), sizeof(iphdr));
+    ip_hdr->protocol = IPPROTO_ICMP;
+    ip_hdr->ttl = 64;
+
+    ip_hdr->tot_len = htons(response_len - sizeof(ether_header));
+
+    ip_hdr->daddr = ip_hdr->saddr;
+    char *ip_router = get_interface_ip(interface);
+    inet_pton(AF_INET, ip_router, &ip_hdr->saddr);
+
+    ip_hdr->check = 0;
+    ip_hdr->check = checksum((uint16_t *)ip_hdr, sizeof(iphdr));
+
+    // send package
+    mac_address m;
+    memcpy(m.addr, ((ether_header *)buf)->ether_shost, sizeof(m.addr));
+    eth_hdr->ether_type = htons(ETHERTYPE_IP);
+
+    cout << "Termini fct cu " << response_type << endl;
+    send_over_Ethernet(eth_hdr, response_len, interface, m);
+}
+
 int main(int argc, char *argv[]) {
-	// Do not modify this line
 	init(argc - 2, argv + 2);
     Router *router;
 
     try {
         router = new Router(argv[1]);
-        router->test_radix();
         router->run();
         delete router;
     } catch (exception &e) {
