@@ -1,0 +1,56 @@
+    This solution implements all the functionalities that were requested in the
+homework. I have decided to write it in C++, because I found easier to organize
+the code in classes and because of the access to STL (I used std::list for 
+the waiting packages queue and std::map for the MAC addresses cache).
+I modified the content of Makefile (switch gcc with g++ as well as the compiled
+sources) and create_archive.sh (changed *.c with *.cpp).
+    The project is based on the following classes:
+    - radix_tree - gives an implementation of a radix tree, which is an optimal
+    way of repesenting a trie - instead of mantaining an internal node for each
+    bit in the searched IP address, each internal node holds the biggest common
+    part of all the entries from its subtree. This improves the space required
+    by the structure, as well as the time needed to find a solution through it
+    (since many IP addresses start with a common prefix, it is very likely for
+    the internal nodes to contain longer substrings that form the stored
+    elements).
+    - mac_address - contains a MAC address (an array of 6 uint8_t)
+    - waiting_package - contains information of a package that is waiting for
+    router to find the MAC address of the next hop. Note that its constructor
+    does not allocate space for the buffer of the package, so the user should
+    allocate another space before initialising an object of this type
+    - arp_request - contains information of an ARP request that the router
+    is answering
+    - Router - the main class of the program; it represents the router itself.
+    It contains information about the routing data, a cache for MAC addresses,
+    as well as a list (queue) for waiting packages. Note that the cache of MAC 
+    addresses is implemented with std::map rather than a trie, since it is much 
+    smaller than the routing table, so an logarithmic search is not a problem.
+        It contains the following methods:
+        - Router - reads the routing information from the given file
+        - ~Router - deallocates additional memory (for pending requests)
+        - run - a never ending loop that receives a package and manages it, if
+        it is an IPv4 or ARP package
+        - get_mac_address - get the MAC address for the host with the given IP
+            (or nullptr if we don't have it in cache)
+        - send_over_Ethernet - sends a package over Ethernet
+        - manage_IPv4_package - analyses an IPv4 package, checking for its
+        checksum and TTL, gets the next hop from the routing table and sends it
+        over Ethernet. If TTL reached 1 or routing table doesn't contain a
+        solution for the given destination, it will send an ICMP response back
+        to sender. If this is an ICMP request for router, it answers it. If the
+        MAC address of the next hop is unknown at the moment, it queues the
+        package and sends an ARP request.
+        - update_MAC_info - add a MAC address to the cache of the router and
+        sends the pending requests
+        - generate_ARP_request - send an ARP request on the link
+        - generate_ARP_reply - answer an ARP request
+        - manage_ARP_package - updates the MAC cache with the address of the
+        sender and answers it, if it is a request for the router's MAC address
+        - manage_ICMP_package - modifies an IPv4 package that contained an ICMP
+        request for the router. It doesn't send it
+        - send_ICMP_reply - create and send an ICMP response back to sender
+        (destination unreachable or time exceeded).
+
+    The program has the following flow: in main(), an instance of Router is
+created and its run() method is called. The router then waits for any incoming
+packages and addresses it accordingly to their type (ARP or Ipv4).

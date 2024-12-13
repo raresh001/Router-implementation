@@ -1,5 +1,5 @@
 PROJECT=router
-SOURCES=router.cpp lib/lib.c
+SOURCES=*.cpp lib/lib.c
 LIBRARY=nope
 INCPATHS=include
 LIBPATHS=.
@@ -24,10 +24,4 @@ $(BINARY): $(OBJECTS)
 	$(CC) $(INCFLAGS) $(CFLAGS) -fPIC $< -o $@
 
 clean:
-	rm -rf $(OBJECTS) router hosts_output router_*
-
-run_router0: all
-	./router rtable0.txt rr-0-1 r-0 r-1
-
-run_router1: all
-	./router rtable1.txt rr-0-1 r-0 r-1
+	rm -rf *.o lib/lib.o router hosts_output router_*
